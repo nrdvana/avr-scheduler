@@ -1,0 +1,67 @@
+### Clock and Scheduler for 16Mhz AVR
+
+## Synopsis
+
+task_t foo_task;
+void foo(void *arg);
+
+int main() {
+	clock_init();
+	sched_init();
+	
+	#define DELAY 2000L
+	sched_msec_from_now(&foo_task, DELAY, foo, NULL);
+	
+	// infinite loop to pump events
+	sched_run();
+}
+
+void foo(void *arg) {
+	...
+	// repeat at regular interval
+	sched_again_at_msec(&foo_task, foo_task.wakeTime + DELAY);
+}
+
+## Clock
+
+This library implements a clock which takes over one of the timer-counters
+to create both a 32-bit tick counter and a 32-bit millisecond counter.
+The tick counter is a combination of a 16-bit rollover count with the live
+value of the 16-bit timer for the lower bits.  The millisecond counter is
+a plain 32-bit int incremented by an interrupt.  Each time the interrupt
+fires it increments the millisecond count and sets a new compare-interrupt
+on the timer.
+
+At 16Mhz, the 16-bit timer rolls over every 33ms.  As long as interrupts
+are never disabled for this long, the millisecond count will be able to
+recover from missed interrupts (though of course it will be up to 33ms off
+while interrupts are disabled).
+
+Tick counts and millisecond counts are all unsigned values, and when
+comparing them you should use notation like (int32_t)(time2-time1) > VALUE
+to properly handle wrap-around.
+
+## Scheduler
+
+The scheduler maintains a list of tasks which need to run at points in the
+future.  Task records are allocated by the caller, and a task can only be
+scheduled once at a time.  Re-scheduling a task will cancel the previous
+execution time.  Tasks may be scheduled from interrupt routines.
+
+When nothing is due the scheduler will put the AVR into idle-sleep mode.
+This will last at most until the next clock interrupt, which happens at
+least 1/sec.
+
+## TODO
+
+Currently, the clock wakes once per millisecond.  It could be made to only
+update once per timer overflow, but then reading the millisecond count would
+require reading the timer and division to determine how many milliseconds
+had elapsed.  Anyway, it could be improved to wake the AVR less often, but
+that would be hard and error-prone and maybe inefficient.
+
+Currently the scheduler only calls sleep if it is waiting until the next
+millisecond, and busy-waits otherwise.  It would be better to set a timer
+compare interrupt for the desired wake time and then sleep for fractions
+of a millisecond as well.  It will in fact need to do this if the clock is
+improved to not wake every millisecond.
