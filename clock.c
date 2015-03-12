@@ -71,7 +71,7 @@ tickCount32_t clock_combineTicks_cli(uint16_t lowWord) {
 	if ((lowWord&BIT(15)) && !(TCNT1&BIT(15))) {
 		// if the interrupt flag is still set, then the high-word is still correct
 		// else subtract one from the high word
-		if (!(TIFR1|BIT(TOV1)))
+		if (!(TIFR1&BIT(TOV1)))
 			highWord--;
 	}
 	return ((tickCount32_t)highWord << 16) | lowWord;
@@ -82,11 +82,11 @@ tickCount32_t clock_combineTicks_cli(uint16_t lowWord) {
  */
 tickCount32_t clock_readTicks_cli(void) {
 	register uint16_t livecount= TCNT1;
-	register uint8_t overflowFlag= TIFR1|BIT(TOV1);
+	register uint8_t  overflow= TIFR1&BIT(TOV1);
 	register uint16_t highWord= clock.overflowCount;
 	// in the rare case where TCNT1 rolls over right after we read it and before we read the flag,
 	//  we can ignore the flag.  Else the flag means we need to update highWord
-	if (overflowFlag && ~livecount /* (livecount != 0xFFFF) */)
+	if (overflow && (uint8_t)~(uint8_t)(livecount>>8) /* (livecount > 0xFF00) */)
 		highWord++;
 	return ((tickCount32_t)highWord << 16) | livecount;
 }
@@ -98,12 +98,12 @@ tickCount32_t clock_readTicks(void) {
 	uint8_t prevSreg= SREG;
 	cli();
 	register uint16_t livecount= TCNT1;
-	register uint8_t overflowFlag= TIFR1|BIT(TOV1);
+	register uint8_t  overflow= TIFR1&BIT(TOV1);
 	register uint16_t highWord= clock.overflowCount;
 	SREG= prevSreg;
 	// in the rare case where TCNT1 rolls over right before we read the flag,
 	//  we can ignore the flag.  Else the flag means we need to update highWord
-	if (overflowFlag && ~livecount /* (livecount != 0xFFFF) */)
+	if (overflow && (uint8_t)~(uint8_t)(livecount>>8) /* (livecount > 0xFF00) */)
 		highWord++;
 	return ((tickCount32_t)highWord << 16) | livecount;
 }
