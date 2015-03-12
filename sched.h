@@ -1,9 +1,6 @@
 #ifndef SCHED_H
 #define SCHED_H
 
-#include <string.h>
-#include "clock.h"
-
 typedef struct task_s {
 	bool isScheduled:1, isReady: 1, waitForMsec:1, waitForTick: 1;
 	uint32_t wakeTime;
@@ -77,7 +74,7 @@ inline void sched_again_ticks_from_now(task_t *t, tickCount32_t ofs) {
 
 extern void sched_cancel(task_t *t);
 
-extern void sched_run_one(void);
+extern void sched_run_iter(void);
 
 extern void sched_run(void);
 

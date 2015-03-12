@@ -1,14 +1,4 @@
-#include <stdint.h>
-#include <string.h>
-#include <avr/io.h>
-#include <avr/sleep.h>
-#include <avr/interrupt.h>
-//#include <util/delay.h>
-#include <util/delay_basic.h>
-//#include "usb_rawhid.h"
-#include "clock.h"
-#include "sched.h"
-#include "main.h"
+#include "config.h"
 
 #define TASK_WAIT_TICK_THRESHOLD 4
 
@@ -82,7 +72,7 @@ void sched_queue(task_t *t, int8_t flags, uint32_t wake_spec) {
 
 	// If the timestamp is *way* in the past, we flag an error
 	if (timeOfs < -0xFFFFFFL)
-		FLAG_ERR(ERR_SCHED_TIMESTAMP_WRAP);
+		log_error_code(LOG_ERR_SCHEDULER_TIMESTAMP_WRAP);
 
 	move_to_ready(t);
 	SREG= oldSreg;
@@ -137,7 +127,7 @@ tickCount32_t ticksTilNextTask(void) {
 }
 */
 
-void sched_run_one(void) {
+void sched_run_iter(void) {
 	cli();
 	int32_t delay= CLOCK_TICK_PER_MSEC;
 	// Move every task whose tick-time has arrived into the ready list
@@ -191,5 +181,5 @@ void sched_run_one(void) {
 }
 
 void sched_run(void) {
-	while (1) sched_run_one();
+	while (1) sched_run_iter();
 }
